@@ -4,12 +4,17 @@ import numpy
 #import pydemod.coding.polynomial as poly
 import math
 
+import pydemod.coding.crc as crc
+
 def copyto(dest, src, addr):
     for i in range(src.size):
         dest[addr+i] = src[i]
 
 
 def decode_mjd(mjd):
+    """
+    Decodes a Modified Julian Date
+    """
     yp = int((mjd - 15078.2)/365.25)
     mp = int( ( mjd - 14956.1 - math.floor(yp * 365.25) ) / 30.6001 )
     day = int(mjd - 14956 - math.floor( yp * 365.25 ) - math.floor( mp * 30.6001 ))
@@ -20,18 +25,6 @@ def decode_mjd(mjd):
     year = int(1900 + yp + k)
     month = mp - 1 - k * 12
     return (year, month, day)
-
-def crc(poly, deg, block):
-    allones = pow(2, deg) - 1
-    crc = allones
-    for bit in block:
-        msb = (crc >> (deg-1)) & 1
-        crc = (crc << 1) & allones
-        i = msb ^ bit
-        if i != 0:
-            crc = crc ^ poly
-    return crc ^ allones
-
 
 class Station:
     entry_types = ["Multiplex description", "Label", "Conditional access parameters", "AF: Multiple frequency network", "AF: Schedule definition", "Application information", "Announcement support and switching data", "AF: Region definition", "Time and date information", "Audio information", "FAC channel parameters", "AF: Other services", "Language and country", "AF: Detailed region definition", "Packet stream FEC parameters"]
@@ -87,7 +80,7 @@ class Station:
         print("SDC ENTRY GROUP: total {0} bits ({1} bytes)".format(data.size, data.size/8))
         given_crc = self.take(data, data.size-16, 16)
         data = data[:data.size-16]
-        print "\tCRC: calc={0:04X}, given={1:04X}".format(crc(0b0001000000100001, 16, data), given_crc)
+        print "\tCRC: calc={0:04X}, given={1:04X}".format(crc.crc(0b0001000000100001, 16, 0xFFFF, 0xFFFF, data), given_crc)
         print("************************************************************")
 
         cont = True
