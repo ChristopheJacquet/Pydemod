@@ -2,34 +2,50 @@ import numpy
 
 def decode_0xAA_prefixed_frame(samples, sampleRate):
     threshold = ( max(samples) + min(samples) ) / 2
+
+    print("Min={0}, Max={1}, Threshold={2}".format(min(samples), max(samples), threshold))
     
     signs = numpy.array(samples > threshold, int)
     differences = numpy.diff(signs)
     changes = numpy.nonzero(differences)[0]
+
+    print("27:{2}, 28:{0}, 29:{1}".format(signs[28], signs[29], signs[27]))
     
     print "{0} edges at instants: {1}".format(changes.size, changes)
     
-    bitlen = float(changes[7] - changes[0]) / 7.
-    thbitlen = 356./64. * sampleRate/ 96000     # measured duration at 96kHz: 356 samples (17258 bit/s)
+    bitlen = 356./64. * sampleRate/ 96000     # measured duration at 96kHz: 356 samples (17258 bit/s)
     
-    print "Bit length: {0} samples; theoretical {1} samples".format(bitlen, thbitlen)
+    print "Theoretical bit length: {0} samples".format(bitlen)
     
-    #bitlen = thbitlen
+    result = numpy.array([])
     
-    result = numpy.array([1, 0, 1, 0, 1, 0, 1])
+    i = (changes[0]+1) + bitlen/2
+    bitpos = bitlen
+    precBit = signs[i]
     
-    for i in range(8, changes.size):
-        count = int(round((changes[i] - changes[i-1]) / bitlen))
-        
-        # the value of the bits to add is the value of the sample just before
-        # the change 
-        ##print result
-        result = numpy.append(result, [signs[changes[i]-1]] * count)
-        
-        # adjust bit length depending on the beginning of the frame
-        # the more bits received, the better the average value
-        bitlen = float(changes[i] - changes[0]) / result.size
-        
-        print "Edge at {1}: error {0:.3} samples, len={2}, new bitlen={3}".format(bitlen*count - (changes[i] - changes[i-1]), changes[i], count, bitlen)
+    # simple software PLL
+    while i < samples.size:
+        bit = signs[i]
 
-    return result
+        if precBit != bit:
+            print("Transition at {0}, expected at {1}".format(i, bitlen/2-bitpos+i))
+        
+            if bitpos < bitlen/2-1:
+                bitpos += bitlen/20.
+                print("(+)")
+            elif bitpos > bitlen/2+1:
+                bitpos -= bitlen/20.
+                print("(-)")
+
+        
+        if bitpos >= bitlen:
+            result = numpy.append(result, bit)
+            bitpos -= bitlen
+            
+            print("Sample at {0} => {1} (bitpos={2})".format(i, bit, bitpos))
+
+    
+        precBit = bit
+        i += 1
+        bitpos += 1
+    return result.astype(int)

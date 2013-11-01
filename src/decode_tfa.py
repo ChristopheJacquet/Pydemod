@@ -30,7 +30,8 @@ if frame.size < 64:
 
 print "Frame: size {0} bits, contents {1}".format(frame.size, frame)
 
-if frame.size == 64:
+if frame.size >= 64:
+    frame = frame[:64]
     matrix = numpy.mat(numpy.reshape(frame, (8, 8)))
     byteSeq = matrix * numpy.mat("128;64;32;16;8;4;2;1")
     allBytes = [int(byteSeq[i]) for i in range(0,8)]
