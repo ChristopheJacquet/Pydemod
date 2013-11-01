@@ -1,3 +1,9 @@
+# This file is part of Pydemod
+# Copyright Christophe Jacquet (F8FTK), 2011, 2013
+# Licence: GNU GPL v3
+# See: https://code.google.com/p/pydemod/
+
+
 import numpy
 
 def decode_0xAA_prefixed_frame(samples, sampleRate, bitrate=17258, verbose=False):
