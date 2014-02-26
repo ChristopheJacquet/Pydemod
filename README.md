@@ -18,5 +18,7 @@ Currently, the released modules include:
   * functional AMSS decoder
   * functional TFA temperature & humidity sensor decoder (should work for other Instant Transmission IT+ 868 MHz systems, such as LaCrosse ones) → [see blog post (in French)](http://www.jacquet80.eu/blog/post/2011/10/Decodage-capteur-thermo-hygro-TFA)
 
+Pydemod is licensed under the terms of the [GNU GPL v3](https://www.gnu.org/copyleft/gpl.html).
+
 ----
 _Pydemod is developed by [Christophe Jacquet](http://www.jacquet80.eu/), [F8FTK](http://f8ftk.tk)._
