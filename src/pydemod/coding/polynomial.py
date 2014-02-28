@@ -6,6 +6,7 @@ class Code:
     def __init__(self, poly, word_size, offset_words):
         self.word_size = word_size
         self.poly = numpy.array(poly, dtype=int)
+        self.offset_words = offset_words
         
         # calculate the P matrix by polynomial division
         # each row is: e(i)*x^10 mod rds_poly
@@ -52,7 +53,26 @@ class Code:
                     i = i + self.word_size + self.check_size - 1
             i = i + 1
         return wordStream
+    
+    
+    def wordstream_to_bitstream(self, wordstream):
+        #total_size = self.word_size + self.check_size
+        #bitstream = numpy.zeros(total_size * len(wordstream), dtype=int)
+        def to_bin(x):
+            res = []
+            for i in range(self.word_size):
+                res.insert(0, x % 2)
+                x >>= 1
+            return res
         
+        offsets = numpy.array(map(lambda (ofs, wrd): numpy.array(self.offset_words[ofs]), wordstream))
+        words = numpy.array(map(lambda (o, w): to_bin(w), wordstream))
+        
+        res = numpy.dot(numpy.array(words), self.matG) % 2
+        res[:,self.word_size:] ^= offsets
+        
+        return res.flatten()
+    
         
     def __repr__(self):
         return "Poly = " + repr(self.poly) + "\nWord size = " + repr(self.word_size) + "\nP = " + repr(self.matP) + "\nG = " + repr(self.matG) + "\nH = " + repr(self.matH) + "\nSyndromes = " + repr(self.syndromes)
@@ -63,7 +83,7 @@ class Code:
 
 
 amss_code = Code([1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1], 36, {1: [0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1], 2:[1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1]})
-#rds_code = Code([1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1], 16)
+rds_code = Code([1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1], 16, {'A': [0, 0, 1, 1, 1, 1, 1, 1, 0, 0], 'B': [0, 1, 1, 0, 0, 1, 1, 0, 0, 0], 'C': [0, 1, 0, 1, 1, 0, 1, 0, 0, 0], "C'": [1, 1, 0, 1, 0, 1, 0, 0, 0, 0], 'D': [0, 1, 1, 0, 1, 1, 0, 1, 0, 0]})
 
 
 
