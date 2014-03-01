@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This file is part of Pydemod
+# Copyright Christophe Jacquet (F8FTK), 2011
+# Licence: GNU GPL v3
+# See: https://github.com/ChristopheJacquet/Pydemod
+
 import numpy
 #import pydemod.coding.polynomial as poly
 import math

@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This file is part of Pydemod
+# Copyright Christophe Jacquet (F8FTK), 2011, 2014
+# Licence: GNU GPL v3
+# See: https://github.com/ChristopheJacquet/Pydemod
+
 import numpy
 
 class Code:
@@ -56,8 +61,6 @@ class Code:
     
     
     def wordstream_to_bitstream(self, wordstream):
-        #total_size = self.word_size + self.check_size
-        #bitstream = numpy.zeros(total_size * len(wordstream), dtype=int)
         def to_bin(x):
             res = []
             for i in range(self.word_size):
@@ -65,13 +68,24 @@ class Code:
                 x >>= 1
             return res
         
-        offsets = numpy.array(map(lambda (ofs, wrd): numpy.array(self.offset_words[ofs]), wordstream))
+        # Construct the matrix of binary words for the given wordstream, one word per
+        # row, one bit per column.
         words = numpy.array(map(lambda (o, w): to_bin(w), wordstream))
+
+        # Construct the matrix of offset words (as many offset words as data words),
+        # using the same convention.
+        offsets = numpy.array(map(lambda (ofs, wrd): numpy.array(self.offset_words[ofs]), wordstream))
         
-        res = numpy.dot(numpy.array(words), self.matG) % 2
-        res[:,self.word_size:] ^= offsets
+        # We get the bitstream by matrix-multiplying (in Z/2Z) the matrix of words
+        # (one word per row) with G. This gives out the matrix of the words+checksums,
+        # one word+checksum per row.
+        bitstream = numpy.dot(numpy.array(words), self.matG) % 2
         
-        return res.flatten()
+        # Now we need to add the offset words to the checksums, i.e. to the columns
+        # self.word_size to self.word_size+self.check_size-1.
+        bitstream[:,self.word_size:] ^= offsets
+        
+        return bitstream.flatten()
     
         
     def __repr__(self):
