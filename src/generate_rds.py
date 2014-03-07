@@ -7,6 +7,7 @@
 
 import argparse
 import numpy
+import numpy.random as random
 import scipy.io.wavfile as wavfile
 
 import pydemod.app.rds as rds
@@ -23,6 +24,7 @@ parser.add_argument("--unmodulated", help='Generates the unmodulated signal at 2
 parser.add_argument("--baseband", help='Generates basedband samples at 228 kHz', action="store_true")
 parser.add_argument("--phase", type=float, default=0, help='Phase of the 57 kHz carrier in radians (use in cunjunction with --baseband)')
 parser.add_argument("--frequency", type=float, default=57000, help='Frequency of the "57 kHz" carrier in hertz (use in cunjunction with --baseband)')
+parser.add_argument("--noise", type=float, default=0, help='Relative noise. RDS signal is 1. (use in cunjunction with --baseband)')
 parser.add_argument("--wavout", type=str, default=None, help='Output WAV file')
 
 args = parser.parse_args()
@@ -43,6 +45,8 @@ elif args.unmodulated or args.baseband:
         out = shapedSamples
     elif args.baseband:
         out = am.modulate(shapedSamples, sample_rate, args.frequency, args.phase)
+        if args.noise > 0:
+            out = out + random.rand(len(out)) * args.noise*max(abs(out))
     
     iout = (out * 20000./max(abs(out)) ).astype(numpy.dtype('>i2'))
     
