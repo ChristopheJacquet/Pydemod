@@ -9,6 +9,7 @@ import argparse
 import numpy
 import numpy.random as random
 import scipy.io.wavfile as wavfile
+from scipy import signal
 
 import pydemod.app.rds as rds
 import pydemod.modulation.am as am
@@ -25,6 +26,8 @@ parser.add_argument("--baseband", help='Generates basedband samples at 228 kHz',
 parser.add_argument("--phase", type=float, default=0, help='Phase of the 57 kHz carrier in radians (use in cunjunction with --baseband)')
 parser.add_argument("--frequency", type=float, default=57000, help='Frequency of the "57 kHz" carrier in hertz (use in cunjunction with --baseband)')
 parser.add_argument("--noise", type=float, default=0, help='Relative noise. RDS signal is 1. (use in cunjunction with --baseband)')
+parser.add_argument("--tune", type=float, default=None, help='At a tune at the given frequency')
+parser.add_argument("--ootune", type=float, default=None, help='At an on/off tune at the given frequency, with a half-period of 1 second')
 parser.add_argument("--wavout", type=str, default=None, help='Output WAV file')
 
 args = parser.parse_args()
@@ -45,6 +48,10 @@ elif args.unmodulated or args.baseband:
         out = shapedSamples
     elif args.baseband:
         out = am.modulate(shapedSamples, sample_rate, args.frequency, args.phase)
+        if args.tune:
+            out += 2 * numpy.sin(2*numpy.pi * args.tune * numpy.arange(len(out)) / sample_rate)
+        elif args.ootune:
+            out += numpy.sin(2*numpy.pi * args.ootune * numpy.arange(len(out)) / sample_rate) * (1 + signal.square(2*numpy.pi * .5 * numpy.arange(len(out)) / sample_rate))
         if args.noise > 0:
             out = out + random.rand(len(out)) * args.noise*max(abs(out))
     
