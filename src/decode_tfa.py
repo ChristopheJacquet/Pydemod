@@ -27,6 +27,7 @@ import numpy
 import sys
 import io
 import argparse
+import struct
 
 
 parser = argparse.ArgumentParser(description='Decodes TFA temperature and humidity sensors')
@@ -34,7 +35,8 @@ parser = argparse.ArgumentParser(description='Decodes TFA temperature and humidi
 parser.add_argument("--bitrate", type=int, default=17200, help='Bit rate of the transmission, in bit/s')
 parser.add_argument("--synclen", type=int, default=8, help='Number of sync bits (these bits will be ignored)')
 parser.add_argument("--wav", type=str, default="", help='Run in WAV mode. Expects a WAV file that contains a single data frame')
-parser.add_argument("--raw", type=str, default="", help='Run in raw mode, continuously. Expects a raw file sampled at 160 kHz, 16-bit signed big endian. Use "-" to read from stdin. \nExample: rtl_fm -M -f 868.4M -s 160k -  |./decode_tfa.py --squelch 4000 -')
+parser.add_argument("--raw", type=str, default="", help='Run in raw mode, continuously. Expects a raw file sampled at 160 kHz, 16-bit signed big endian. Use "-" to read from stdin. \nExample: rtl_fm -M am -f 868.4M -s 160k -  |./decode_tfa.py --squelch 4000 --raw -')
+parser.add_argument("--rawle", type=str, default="", help='Same as --raw, but reads 16-bit signed *little* endian samples')
 parser.add_argument("--squelch", type=int, default=4000, help='Squelch level for raw mode')
 parser.add_argument("--verbose", help='Print additional debug messages', action="store_true")
 
@@ -71,8 +73,11 @@ print("Bitrate: {0}, synclen: {1}, framelen: {2}".format(bitrate, synclen, frame
 if len(args.wav) > 0:
     (sampleRate, samples) = wavfile.read(args.wav)
     decode(samples, sampleRate)
-elif len(args.raw) > 0:
-    filename = args.raw
+elif len(args.raw) > 0 or len(args.rawle) > 0:
+    if len(args.raw) > 0:
+        filename = args.raw
+    else:
+        filename = args.rawle
     if(filename == "-"):
         filename = sys.stdin.fileno()
     srate = 160000
@@ -82,41 +87,44 @@ elif len(args.raw) > 0:
     print("Using frame duration {0:0.1f} samples".format(framedur))
     print("Squelch at {0}, should be slightly greater than usual max; use --squelch to change".format(args.squelch))
 
-    count = 0
-    sum = 0.
-    max = 0.
-    min = 100000.
-    
     inFrameCount = 0
 
+    num = srate/10
+    if len(args.raw) > 0:
+        fmt = ">{}h".format(num)
+    else:
+        fmt = "<{}h".format(num)
+
     while True:
-        b = fin.read(2)
-        if len(b) == 2:
-            val = ord(b[0])*256+ord(b[1])  # big endian
-            sum += val
-            if val < min: min = val
-            if val > max: max = val
-            count += 1
+        b = fin.read(num*2)
+        if len(b) == num*2:
+            vals = struct.unpack(fmt, b)
             
-            if(inFrameCount > 0):
-                frameSamples.append(val)
-                inFrameCount += 1
-                if(inFrameCount > framedur):
-                    print("\n---------------------------------------")
-                    decode(numpy.array(frameSamples, dtype=float), srate)
-                    print("---------------------------------------")
-                    inFrameCount = 0
-            elif(val > args.squelch):
-                frameSamples = [0, 0, val]
-                inFrameCount = 3
-    
-        if count == srate/2:
-            sys.stdout.write("\rMin: {0} - Mean: {1} - Max: {2}             ".format(min, sum / count, max))
+            vsum = sum(vals)
+            vmin = min(vals)
+            vmax = max(vals)
+
+            sys.stdout.write("\rMin: {0} - Mean: {1} - Max: {2}             ".format(vmin, vsum / num, vmax))
             sys.stdout.flush()
-            sum = 0.
-            max = 0.
-            min = 100000.
-            count = 0
+
+            # iterate over all samples if currently decoding frame or if a sample
+            # opens the squelch
+            if inFrameCount > 0 or vmax > args.squelch:
+                for val in vals:
+                    if(inFrameCount > 0):
+                        frameSamples.append(val)
+                        inFrameCount += 1
+                        if(inFrameCount > framedur):
+                            print("\n---------------------------------------")
+                            decode(numpy.array(frameSamples, dtype=float), srate)
+                            print("---------------------------------------")
+                            inFrameCount = 0
+                    elif(val > args.squelch):
+                        frameSamples = [0, 0, val]
+                        inFrameCount = 3
+        else:
+            print "err!"
+    
 else:
     print("You must use --wav or --raw. See help.")
 
