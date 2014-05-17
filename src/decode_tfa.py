@@ -91,9 +91,9 @@ elif len(args.raw) > 0 or len(args.rawle) > 0:
 
     num = srate/10
     if len(args.raw) > 0:
-        fmt = ">{}h".format(num)
+        fmt = ">{}H".format(num)
     else:
-        fmt = "<{}h".format(num)
+        fmt = "<{}H".format(num)
 
     while True:
         b = fin.read(num*2)
@@ -123,7 +123,8 @@ elif len(args.raw) > 0 or len(args.rawle) > 0:
                         frameSamples = [0, 0, val]
                         inFrameCount = 3
         else:
-            print "err!"
+            print "\nEOF"
+            break
     
 else:
     print("You must use --wav or --raw. See help.")
