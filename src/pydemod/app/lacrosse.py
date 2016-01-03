@@ -19,10 +19,22 @@ def take(vec, u, l):
 #                 initial value 0, final xor value 0
 #
 def decode_tx29(binaryMsg):
+    # lengths counts 4 bits (nibbles) excluding 1st one
+    givenLength = take(binaryMsg, 0, 4)
+    computedLength = len(binaryMsg) / 4 - 1
+    print "Length: calculated={0:02X}, received={1:02X}, valid={2}".format(computedLength, givenLength, "yes" if (givenLength == computedLength) else "no")
     givenCRC = take(binaryMsg, binaryMsg.size-8, 8)
-    print "CRC: calculated={0:02X}, received={1:02X}".format(crc.crc(0x31, 8, 0, 0, binaryMsg[:-8]), givenCRC)
+    computedCRC = crc.crc(0x31, 8, 0, 0, binaryMsg[:-8])
+    print "CRC: calculated={0:02X}, received={1:02X}, valid={2}".format(computedCRC, givenCRC, "yes" if (givenCRC == computedCRC) else "no")
+    devID = take(binaryMsg, 5, 6)
+    print "Device: id={0:02X}".format(devID)
+    newBattery = take(binaryMsg, 10, 1)
+    weakBattery = take(binaryMsg, 24, 1)
+    print "Battery: new={0}, weak={1}".format("yes" if newBattery else "no", "yes" if weakBattery else "no")
     temperature = (take(binaryMsg, 12, 4) * 10 + take(binaryMsg, 16, 4) + take(binaryMsg, 20, 4) * .1) - 40
-    humidity = take(binaryMsg, 24, 8)
+    reserved = take(binaryMsg, 24, 1)
+    print "Reserved: received={0:01X}, valid={1}".format(reserved, "yes" if (reserved == 0) else "no")
+    humidity = take(binaryMsg, 25, 7)
     if humidity == 106:
         humidity = "N/A"
     print "Temperature: {0:0.1f} C -- Humidity: {1} %".format(temperature, humidity)
