@@ -1,5 +1,6 @@
 # This file is part of Pydemod
 # Copyright Christophe Jacquet (F8FTK), 2011, 2013, 2016
+# Copyright Krzysztof Burghardt, 2016
 # Licence: GNU GPL v3
 # See: https://code.google.com/p/pydemod/
 
@@ -22,19 +23,19 @@ def decode_tx29(binaryMsg):
     # lengths counts 4 bits (nibbles) excluding 1st one
     givenLength = take(binaryMsg, 0, 4)
     actualLength = len(binaryMsg) / 4 - 1
-    print "Length: actual={0:02X}, received={1:02X}, valid={2}".format(actualLength, givenLength, "yes" if (givenLength == actualLength) else "no")
+    print("Length: actual={:02X}, received={:02X}, valid={}".format(actualLength, givenLength, "yes" if (givenLength == actualLength) else "no"))
     givenCRC = take(binaryMsg, binaryMsg.size-8, 8)
     computedCRC = crc.crc(0x31, 8, 0, 0, binaryMsg[:-8])
-    print "CRC: computed={0:02X}, received={1:02X}, valid={2}".format(computedCRC, givenCRC, "yes" if (givenCRC == computedCRC) else "no")
+    print("CRC: computed={:02X}, received={:02X}, valid={}".format(computedCRC, givenCRC, "yes" if (givenCRC == computedCRC) else "no"))
     devID = take(binaryMsg, 4, 6)
-    print "Device: id={0:02X}".format(devID)
+    print("Device: id={:02X}".format(devID))
     newBattery = take(binaryMsg, 10, 1)
     weakBattery = take(binaryMsg, 24, 1)
-    print "Battery: new={0}, weak={1}".format("yes" if newBattery else "no", "yes" if weakBattery else "no")
+    print("Battery: new={}, weak={}".format("yes" if newBattery else "no", "yes" if weakBattery else "no"))
     temperature = (take(binaryMsg, 12, 4) * 10 + take(binaryMsg, 16, 4) + take(binaryMsg, 20, 4) * .1) - 40
     reserved = take(binaryMsg, 11, 1)
-    print "Reserved 0 bit: received={0:01X}, valid={1}".format(reserved, "yes" if (reserved == 0) else "no")
+    print("Reserved 0 bit: received={:01X}, valid={}".format(reserved, "yes" if (reserved == 0) else "no"))
     humidity = take(binaryMsg, 25, 7)
     if humidity == 106:
         humidity = "N/A"
-    print "Temperature: {0:0.1f} C -- Humidity: {1} %".format(temperature, humidity)
+    print("Temperature: {:+0.1f} C -- Humidity: {} %".format(temperature, humidity))
