@@ -16,8 +16,8 @@ Currently, the released modules include:
   * CRC calculation
  * application layer:
   * functional AMSS decoder
-  * functional TFA temperature & humidity sensor decoder (should work for other Instant Transmission IT+ 868 MHz systems, such as LaCrosse ones) → [see blog post (in French)](http://www.jacquet80.eu/blog/post/2011/10/Decodage-capteur-thermo-hygro-TFA)
-   * You can very easily receive signals using an RTL-SDR dongle, using a command like this: `rtl_fm -M am -f 868.4M -s 160k -  |./decode_tfa.py --squelch 4000 --rawle -`
+  * functional TFA temperature & humidity sensor decoder (should work for other Instant Transmission IT+ 868 MHz systems, such as LaCrosse ones, or 434 MHz such as Conrad ones) → [see blog post (in French)](http://www.jacquet80.eu/blog/post/2011/10/Decodage-capteur-thermo-hygro-TFA)
+   * You can very easily receive signals using an RTL-SDR dongle, using a command like this: `rtl_fm -M am -f 868.4M -s 160k -  |./decode_weather.py --protocol tx29 --squelch 4000 --rawle -`
 
 Pydemod is licensed under the terms of the [GNU GPL v3](https://www.gnu.org/copyleft/gpl.html).
 

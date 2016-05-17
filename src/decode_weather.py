@@ -1,25 +1,16 @@
 #!/usr/bin/python
 
 # This file is part of Pydemod
-# Copyright Christophe Jacquet (F8FTK), 2011, 2013
+# Copyright Christophe Jacquet (F8FTK), 2011, 2013, 2016
 # Licence: GNU GPL v3
 # See: https://code.google.com/p/pydemod/
 
-#
-# Frame structure on an example:
-#   AA - sync byte (sometimes multiple sync bytes)
-#   2D \ presumably a vendor/sensor type identifier
-#   D4 /
-#   96 \   follows the same protocol as LaCrosse's TX29  -> 9 nibbles following
-#   45  |  0x64 -> sensor ID ?
-#   47  |  0x574 -> (temperature + 40) * 10 in BCD  --> 17.4 C
-#   4D  |  0x4D -> 77 % humidity
-#   0B /
-# The CRC is calculated on the last 4 bytes before the 1-byte CRC
-#
+# Examples:
+#   rtl_fm -M am -f 434.05M -s 160k -  |./decode_weather.py --protocol conrad --squelch 4000 --rawle -
+#   rtl_fm -M am -f 868.4M -s 160k -  |./decode_weather.py --protocol tx29 --squelch 4000 --rawle -
 
-import pydemod.app.lacrosse as lacrosse
 import pydemod.coding.logic as logic
+from pydemod.app import weather_sensors
 
 import scipy.io.wavfile as wavfile
 import numpy
@@ -32,18 +23,20 @@ import struct
 
 parser = argparse.ArgumentParser(description='Decodes TFA temperature and humidity sensors')
 
+parser.add_argument("--protocol", type=str, default="", help='Protocol: tx29 or conrad')
 parser.add_argument("--bitrate", type=int, default=17200, help='Bit rate of the transmission, in bit/s')
 parser.add_argument("--synclen", type=int, default=8, help='Number of sync bits (these bits will be ignored)')
 parser.add_argument("--wav", type=str, default="", help='Run in WAV mode. Expects a WAV file that contains a single data frame')
-parser.add_argument("--raw", type=str, default="", help='Run in raw mode, continuously. Expects a raw file sampled at 160 kHz, 16-bit signed big endian. Use "-" to read from stdin. \nExample: rtl_fm -M am -f 868.4M -s 160k -  |./decode_tfa.py --squelch 4000 --raw -')
+parser.add_argument("--raw", type=str, default="", help='Run in raw mode, continuously. Expects a raw file sampled at 160 kHz, 16-bit signed big endian. Use "-" to read from stdin. \nExample: rtl_fm -M am -f 868.4M -s 160k -  |./decode_weather.py --squelch 4000 --raw -')
 parser.add_argument("--rawle", type=str, default="", help='Same as --raw, but reads 16-bit signed *little* endian samples')
 parser.add_argument("--squelch", type=int, default=4000, help='Squelch level for raw mode')
+parser.add_argument("--window_duration", type=int, default=None, help='Squelch window duration, in samples')
 parser.add_argument("--verbose", help='Print additional debug messages', action="store_true")
 
 args = parser.parse_args()
 
 
-def decode(samples, sampleRate):
+def rx_tx29(samples, sampleRate, unused_squelch):
     frame = logic.decode_0xAA_prefixed_frame(samples, sampleRate, bitrate=bitrate, verbose=args.verbose)
 
     if frame.size < framelen:
@@ -59,14 +52,45 @@ def decode(samples, sampleRate):
         allBytes = [int(byteSeq[i]) for i in range(0,len(byteSeq))]
         print "Frame hex contents: " + " ".join(["{0:02X}".format(b) for b in allBytes])
      
-        lacrosse.decode_tx29(frame[(synclen + 16):])
-    
+        return weather_sensors.decode_tx29(frame[(synclen + 16):])
 
+
+def rx_conrad(samples, sampleRate, squelch):
+    threshold = squelch #numpy.mean(samples)
+    binarized = numpy.array(samples > threshold, dtype=int)
+    diff = binarized[1:] - binarized[:-1]
+    edges = ((diff > 0).nonzero())[0]
+    lengths = edges[1:] - edges[:-1]
+    #print(lengths)
+    reports = []
+    s = ""
+    for l in lengths:
+        if l < 550:
+            s += "0"
+        elif l < 1000:
+            s += "1"
+        else:
+            if len(s) > 1:
+                print(s)
+                r = weather_sensors.decode_conrad(s)
+                s = ""
+                if r:
+                    reports.append(r)
+    return weather_sensors.most_frequent_report(reports)
 
 
 bitrate = args.bitrate
 synclen = args.synclen
-framelen = 56 + synclen
+
+if args.protocol == "tx29":
+    rx = rx_tx29
+    framelen = 56 + synclen
+    repeats = 1
+elif args.protocol == "conrad":
+    rx = rx_conrad
+    framelen = 42
+    repeats = 6
+    bitrate = 200
 
 print("Bitrate: {0}, synclen: {1}, framelen: {2}".format(bitrate, synclen, framelen))
 
@@ -83,7 +107,7 @@ elif len(args.raw) > 0 or len(args.rawle) > 0:
     srate = 160000
     fin = io.open(filename, mode="rb")
 
-    framedur = 1.2 * ( framelen / float(bitrate) * srate )
+    framedur = 1.2 * ( framelen / float(bitrate) * srate ) * repeats
     print("Using frame duration {0:0.1f} samples".format(framedur))
     print("Squelch at {0}, should be slightly greater than usual max; use --squelch to change".format(args.squelch))
 
@@ -103,12 +127,16 @@ elif len(args.raw) > 0 or len(args.rawle) > 0:
             vsum = sum(vals)
             vmin = min(vals)
             vmax = max(vals)
+            nvals = numpy.array(vals)
+            aboveSquelch = (nvals >= args.squelch).sum()
+            fracAboveSquelch = float(aboveSquelch) / len(vals)
+            percentile90 = numpy.percentile(nvals, 95)
 
-            sys.stdout.write("\rMin: {0} - Mean: {1} - Max: {2}             ".format(vmin, vsum / num, vmax))
+            sys.stdout.write("\rMin: {} - Mean: {} - Max: {} - 90th percentile: {} - Above squelch: {} %             ".format(vmin, vsum / num, vmax, percentile90, int(fracAboveSquelch*100)))
             sys.stdout.flush()
 
-            # iterate over all samples if currently decoding frame or if a sample
-            # opens the squelch
+            # Iterate over all samples if currently decoding frame or if a sample
+            # opens the squelch.
             if inFrameCount > 0 or vmax > args.squelch:
                 for val in vals:
                     if(inFrameCount > 0):
@@ -116,7 +144,8 @@ elif len(args.raw) > 0 or len(args.rawle) > 0:
                         inFrameCount += 1
                         if(inFrameCount > framedur):
                             print("\n---------------------------------------")
-                            decode(numpy.array(frameSamples, dtype=float), srate)
+                            report = rx(numpy.array(frameSamples, dtype=float), srate, args.squelch)
+                            print("==> {}".format(report))
                             print("---------------------------------------")
                             inFrameCount = 0
                     elif(val > args.squelch):
