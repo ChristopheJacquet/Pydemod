@@ -31,6 +31,7 @@ parser.add_argument("--raw", type=str, default="", help='Run in raw mode, contin
 parser.add_argument("--rawle", type=str, default="", help='Same as --raw, but reads 16-bit signed *little* endian samples')
 parser.add_argument("--squelch", type=int, default=4000, help='Squelch level for raw mode')
 parser.add_argument("--window_duration", type=int, default=None, help='Squelch window duration, in samples')
+parser.add_argument("--passthrough", type=str, default='')
 parser.add_argument("--verbose", help='Print additional debug messages', action="store_true")
 
 args = parser.parse_args()
@@ -79,83 +80,90 @@ def rx_conrad(samples, sampleRate, squelch):
     return weather_sensors.most_frequent_report(reports)
 
 
-bitrate = args.bitrate
-synclen = args.synclen
+def decode(callback=None):
+    global bitrate, synclen, framelen
 
-if args.protocol == "tx29":
-    rx = rx_tx29
-    framelen = 56 + synclen
-    repeats = 1
-elif args.protocol == "conrad":
-    rx = rx_conrad
-    framelen = 42
-    repeats = 6
-    bitrate = 200
-
-print("Bitrate: {0}, synclen: {1}, framelen: {2}".format(bitrate, synclen, framelen))
-
-if len(args.wav) > 0:
-    (sampleRate, samples) = wavfile.read(args.wav)
-    decode(samples, sampleRate)
-elif len(args.raw) > 0 or len(args.rawle) > 0:
-    if len(args.raw) > 0:
-        filename = args.raw
-    else:
-        filename = args.rawle
-    if(filename == "-"):
-        filename = sys.stdin.fileno()
-    srate = 160000
-    fin = io.open(filename, mode="rb")
-
-    framedur = 1.2 * ( framelen / float(bitrate) * srate ) * repeats
-    print("Using frame duration {0:0.1f} samples".format(framedur))
-    print("Squelch at {0}, should be slightly greater than usual max; use --squelch to change".format(args.squelch))
-
-    inFrameCount = 0
-
-    num = srate/10
-    if len(args.raw) > 0:
-        fmt = ">{}H".format(num)
-    else:
-        fmt = "<{}H".format(num)
-
-    while True:
-        b = fin.read(num*2)
-        if len(b) == num*2:
-            vals = struct.unpack(fmt, b)
-            
-            vsum = sum(vals)
-            vmin = min(vals)
-            vmax = max(vals)
-            nvals = numpy.array(vals)
-            aboveSquelch = (nvals >= args.squelch).sum()
-            fracAboveSquelch = float(aboveSquelch) / len(vals)
-            percentile90 = numpy.percentile(nvals, 95)
-
-            sys.stdout.write("\rMin: {} - Mean: {} - Max: {} - 90th percentile: {} - Above squelch: {} %             ".format(vmin, vsum / num, vmax, percentile90, int(fracAboveSquelch*100)))
-            sys.stdout.flush()
-
-            # Iterate over all samples if currently decoding frame or if a sample
-            # opens the squelch.
-            if inFrameCount > 0 or vmax > args.squelch:
-                for val in vals:
-                    if(inFrameCount > 0):
-                        frameSamples.append(val)
-                        inFrameCount += 1
-                        if(inFrameCount > framedur):
-                            print("\n---------------------------------------")
-                            report = rx(numpy.array(frameSamples, dtype=float), srate, args.squelch)
-                            print("==> {}".format(report))
-                            print("---------------------------------------")
-                            inFrameCount = 0
-                    elif(val > args.squelch):
-                        frameSamples = [0, 0, val]
-                        inFrameCount = 3
-        else:
-            print "\nEOF"
-            break
+    bitrate = args.bitrate
+    synclen = args.synclen
     
-else:
-    print("You must use --wav or --raw. See help.")
+    if args.protocol == "tx29":
+        rx = rx_tx29
+        framelen = 56 + synclen
+        repeats = 1
+    elif args.protocol == "conrad":
+        rx = rx_conrad
+        framelen = 42
+        repeats = 6
+        bitrate = 200
+
+    print("Bitrate: {0}, synclen: {1}, framelen: {2}".format(bitrate, synclen, framelen))
+
+    if len(args.wav) > 0:
+        (sampleRate, samples) = wavfile.read(args.wav)
+        # FIXME decode(samples, sampleRate)
+    elif len(args.raw) > 0 or len(args.rawle) > 0:
+        if len(args.raw) > 0:
+            filename = args.raw
+        else:
+            filename = args.rawle
+        if(filename == "-"):
+            filename = sys.stdin.fileno()
+        srate = 160000
+        fin = io.open(filename, mode="rb")
+
+        framedur = 1.2 * ( framelen / float(bitrate) * srate ) * repeats
+        print("Using frame duration {0:0.1f} samples".format(framedur))
+        print("Squelch at {0}, should be slightly greater than usual max; use --squelch to change".format(args.squelch))
+
+        inFrameCount = 0
+
+        num = srate/10
+        if len(args.raw) > 0:
+            fmt = ">{}H".format(num)
+        else:
+            fmt = "<{}H".format(num)
+
+        while True:
+            b = fin.read(num*2)
+            if len(b) == num*2:
+                vals = struct.unpack(fmt, b)
+            
+                vsum = sum(vals)
+                vmin = min(vals)
+                vmax = max(vals)
+                nvals = numpy.array(vals)
+                aboveSquelch = (nvals >= args.squelch).sum()
+                fracAboveSquelch = float(aboveSquelch) / len(vals)
+                percentile90 = numpy.percentile(nvals, 95)
+
+                sys.stdout.write("\rMin: {} - Mean: {} - Max: {} - 90th percentile: {} - Above squelch: {} %             ".format(vmin, vsum / num, vmax, percentile90, int(fracAboveSquelch*100)))
+                sys.stdout.flush()
+
+                # Iterate over all samples if currently decoding frame or if a sample
+                # opens the squelch.
+                if inFrameCount > 0 or vmax > args.squelch:
+                    for val in vals:
+                        if(inFrameCount > 0):
+                            frameSamples.append(val)
+                            inFrameCount += 1
+                            if(inFrameCount > framedur):
+                                print("\n---------------------------------------")
+                                report = rx(numpy.array(frameSamples, dtype=float), srate, args.squelch)
+                                print("==> {}".format(report))
+                                print("---------------------------------------")
+                                inFrameCount = 0
+                                if report and callback:
+                                    callback(report)
+                        elif(val > args.squelch):
+                            frameSamples = [0, 0, val]
+                            inFrameCount = 3
+            else:
+                print "\nEOF"
+                break
+    
+    else:
+        print("You must use --wav or --raw. See help.")
 
 
+if __name__ == "__main__":
+    decode()
