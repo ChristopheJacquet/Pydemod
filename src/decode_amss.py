@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import scipy.io.wavfile as wavfile
 import numpy
@@ -26,7 +26,7 @@ def amss_deshape(signal, symbolLength):
     changeInstants = numpy.nonzero(changes)[0]
     changeLengths = numpy.diff(changeInstants)
     
-    print "changeLengths = " + str(changeLengths)
+    print(f"changeLengths = {changeLengths}")
     
     # reconstruct pulse stream
     #pulseStream = changes[changeInstants]
@@ -60,7 +60,7 @@ bits = manchester.manchester_decode(amss_deshape(deltaPhiF, manchesterPeriod))
 
 word_stream = poly.amss_code.bitstream_to_wordstream(bits)
 
-print word_stream
+print(word_stream)
 
 
 s = amss.Station()

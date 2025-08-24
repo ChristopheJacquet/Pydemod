@@ -70,11 +70,11 @@ class Code:
         
         # Construct the matrix of binary words for the given wordstream, one word per
         # row, one bit per column.
-        words = numpy.array(map(lambda (o, w): to_bin(w), wordstream))
+        words = numpy.array(list(map(lambda offset_word: to_bin(offset_word[1]), wordstream)))
 
         # Construct the matrix of offset words (as many offset words as data words),
         # using the same convention.
-        offsets = numpy.array(map(lambda (ofs, wrd): numpy.array(self.offset_words[ofs]), wordstream))
+        offsets = numpy.array(list(map(lambda offset_word: numpy.array(self.offset_words[offset_word[0]]), wordstream)))
         
         # We get the bitstream by matrix-multiplying (in Z/2Z) the matrix of words
         # (one word per row) with G. This gives out the matrix of the words+checksums,
@@ -102,8 +102,7 @@ rds_code = Code([1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1], 16, {'A': [0, 0, 1, 1, 1, 1, 
 
 
 def main():
-    #print amss_code
-    print amss_code
+    print(amss_code)
 
 if __name__ == "__main__":
     main()

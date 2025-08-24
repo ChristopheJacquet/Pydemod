@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # This file is part of Pydemod
 # Copyright Christophe Jacquet (F8FTK), 2014
@@ -26,7 +26,7 @@ parser.add_argument("--baseband", help='Generates basedband samples at 228 kHz',
 parser.add_argument("--phase", type=float, default=0, help='Phase of the 57 kHz carrier in radians (use in cunjunction with --baseband)')
 parser.add_argument("--frequency", type=float, default=57000, help='Frequency of the "57 kHz" carrier in hertz (use in cunjunction with --baseband)')
 parser.add_argument("--noise", type=float, default=0, help='Relative noise. RDS signal is 1. (use in cunjunction with --baseband)')
-parser.add_argument("--tune", type=float, default=None, help='At a tune at the given frequency')
+parser.add_argument("--tune", type=float, default=None, help='Add a tune at the given frequency')
 parser.add_argument("--ootune", type=float, default=None, help='At an on/off tune at the given frequency, with a half-period of 1 second')
 parser.add_argument("--wavout", type=str, default=None, help='Output WAV file')
 

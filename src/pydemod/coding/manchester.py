@@ -12,7 +12,7 @@ def manchester_decode(pulseStream):
         if pulseStream[i] == pulseStream[i-1]:
             # if so, sync has slipped
             # try to resync
-            print "<slip: " + str(i) + ">"
+            print(f"<slip: {i}>")
             i = i - 1
         bits.append(pulseStream[i] == 1)
         i = i + 2

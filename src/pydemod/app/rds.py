@@ -55,7 +55,7 @@ def unmodulated_signal(bitstream, sample_rate = 228000):
     # Positive symbol pattern
     symbol = numpy.zeros(samples_per_bit)
     symbol[0] = 1
-    symbol[samples_per_bit/2-1] = -1
+    symbol[samples_per_bit//2-1] = -1
     
     # Generate the sample array
     samples = numpy.tile(symbol, len(diffbs))

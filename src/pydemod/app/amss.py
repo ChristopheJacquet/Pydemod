@@ -45,7 +45,7 @@ class Station:
         
 
     def process_block(self, type, word):
-        print "Block type: {0}".format(type)
+        print(f"Block type: {type}")
         if type == 1:
             vflag = self.take(word, 0, 1)
             n_segments = self.take(word, 4, 4)+1
@@ -85,7 +85,7 @@ class Station:
         print("SDC ENTRY GROUP: total {0} bits ({1} bytes)".format(data.size, data.size/8))
         given_crc = self.take(data, data.size-16, 16)
         data = data[:data.size-16]
-        print "\tCRC: calc={0:04X}, given={1:04X}".format(crc.crc(0b0001000000100001, 16, 0xFFFF, 0xFFFF, data), given_crc)
+        print("\tCRC: calc={0:04X}, given={1:04X}".format(crc.crc(0b0001000000100001, 16, 0xFFFF, 0xFFFF, data), given_crc))
         print("************************************************************")
 
         cont = True
@@ -116,7 +116,7 @@ class Station:
             print("Schedule Id: {0}".format(self.take(data, 12, 4)))
             print("Days of week: {0:07b}".format(self.take(data, 16, 7)))
             time = self.take(data, 23, 11)
-            print("Start time: {0:02d}:{1:02d}".format(time/60, time % 60))
+            print("Start time: {0:02d}:{1:02d}".format(time//60, time % 60))
             print("Duration: {0} min".format(self.take(data, 34, 14)))
             
         if type == 7:
@@ -134,7 +134,7 @@ class Station:
             (year, month, day) = decode_mjd(mjd)
             time = self.take(data, 29, 11)
             print("Date: {0:04d}-{1:02d}-{2:02d}".format(year, month, day))
-            print("UTC time: {0:02d}:{1:02d}".format(time/60, time%60))
+            print("UTC time: {0:02d}:{1:02d}".format(time//60, time%60))
             
         if type == 11:
             siaFlag = self.take(data, 12, 1)
@@ -171,7 +171,7 @@ class Station:
             if sysId==2:
                 print("AM service without AMSS\n")
                 for i in range(0, aflen, 2):
-                    print("\tfreq = {0} kHz", self.take(data, i*16, 16))
+                    print("\tfreq = {0} kHz".format(self.take(data, i*16, 16)))
             
             if sysId==4:
                 print("FM-RDS service, 16-bit PI = {0:04X}".format(self.take(data, 0, 16)))
@@ -207,7 +207,3 @@ class Station:
         self.segments_ok = -1
         self.processed = False
         
-
-#s = Station()
-
-#print s.take(numpy.array([1, 1, 0, 1, 0, 1, 0, 0]), 1, 5)

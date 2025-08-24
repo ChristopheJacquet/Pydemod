@@ -10,19 +10,19 @@ def decode_0xAA_prefixed_frame(samples, sampleRate, bitrate=17258, verbose=False
     threshold = numpy.mean(samples)
 
     if verbose:
-        print("Min={0}, Max={1}, Threshold={2}".format(min(samples), max(samples), threshold))
+        print(f"Min={min(samples)}, Max={max(samples)}, Threshold={threshold}")
     
     signs = numpy.array(samples > threshold, int)
     differences = numpy.diff(signs)
     changes = numpy.nonzero(differences)[0]
 
     if verbose:    
-        print "{0} edges at instants: {1}".format(changes.size, changes)
+        print(f"{changes.size} edges at instants: {changes}")
     
     bitlen = sampleRate / bitrate
     
     if verbose:
-        print "Theoretical bit length: {0} samples".format(bitlen)
+        print(f"Theoretical bit length: {bitlen} samples")
     
     result = numpy.array([])
     
@@ -36,7 +36,7 @@ def decode_0xAA_prefixed_frame(samples, sampleRate, bitrate=17258, verbose=False
 
         if precBit != bit:
             if verbose:
-                print("Transition at {0}, expected at {1}".format(i, bitlen/2-bitpos+i))
+                print(f"Transition at {i}, expected at {bitlen/2-bitpos+i}")
         
             if bitpos < bitlen/2-1:
                 bitpos += bitlen/10.
@@ -53,7 +53,7 @@ def decode_0xAA_prefixed_frame(samples, sampleRate, bitrate=17258, verbose=False
             bitpos -= bitlen
             
             if verbose:
-                print("Sample at {0} => {1} (bitpos={2})".format(i, bit, bitpos))
+                print(f"Sample at {i} => {bit} (bitpos={bitpos})")
 
     
         precBit = bit

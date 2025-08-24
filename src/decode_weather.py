@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # This file is part of Pydemod
 # Copyright Christophe Jacquet (F8FTK), 2011, 2013, 2016
@@ -43,7 +43,7 @@ def rx_tx29(samples, sampleRate, unused_squelch):
     if frame.size < framelen:
         frame = numpy.append(frame, [0] * (framelen - frame.size))
 
-    print "Frame: size {0} bits, contents {1}, framelen={2}".format(frame.size, "".join(map(str, frame.tolist())), framelen)
+    print("Frame: size {0} bits, contents {1}, framelen={2}".format(frame.size, "".join(map(str, frame.tolist())), framelen))
 
     if frame.size >= framelen:
         frame = frame[:framelen]
@@ -51,7 +51,7 @@ def rx_tx29(samples, sampleRate, unused_squelch):
         matrix = numpy.mat(numpy.reshape(frame, (framelen/8, 8)))
         byteSeq = matrix * numpy.mat("128;64;32;16;8;4;2;1")
         allBytes = [int(byteSeq[i]) for i in range(0,len(byteSeq))]
-        print "Frame hex contents: " + " ".join(["{0:02X}".format(b) for b in allBytes])
+        print("Frame hex contents: " + " ".join(["{0:02X}".format(b) for b in allBytes]))
      
         return weather_sensors.decode_tx29(frame[(synclen + 16):])
 
@@ -62,7 +62,6 @@ def rx_conrad(samples, sampleRate, squelch):
     diff = binarized[1:] - binarized[:-1]
     edges = ((diff > 0).nonzero())[0]
     lengths = edges[1:] - edges[:-1]
-    #print(lengths)
     reports = []
     s = ""
     for l in lengths:
@@ -117,11 +116,11 @@ def decode(callback=None):
 
         inFrameCount = 0
 
-        num = srate/10
+        num = int(srate/10)
         if len(args.raw) > 0:
-            fmt = ">{}H".format(num)
+            fmt = f">{num}H"
         else:
-            fmt = "<{}H".format(num)
+            fmt = f"<{num}H"
 
         while True:
             b = fin.read(num*2)
@@ -158,7 +157,7 @@ def decode(callback=None):
                             frameSamples = [0, 0, val]
                             inFrameCount = 3
             else:
-                print "\nEOF"
+                print("\nEOF")
                 break
     
     else:

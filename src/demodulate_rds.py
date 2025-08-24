@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # This file is part of Pydemod
 # Copyright Christophe Jacquet (F8FTK), 2014
@@ -51,7 +51,7 @@ samples = samples.astype(float) / max(abs( samples ))
 print( "Sample rate: {} Hz, duration: {} s".format(sampleRate, len(samples) / float(sampleRate)) )
 
 
-filt57k = signal.remez(512, numpy.array([0, 53000, 54000, 60000, 61000, sampleRate/2]), numpy.array([0, 1, 0]), Hz = sampleRate)
+filt57k = signal.remez(512, numpy.array([0, 53000, 54000, 60000, 61000, sampleRate/2]), numpy.array([0, 1, 0]), fs = sampleRate)
 
 rdsBand = signal.convolve(samples, filt57k)
 
@@ -59,9 +59,9 @@ rdsBand = signal.convolve(samples, filt57k)
 # quadrature sampling
 
 # ensure array is of length 4*N
-rdsBand = rdsBand[:(len(rdsBand)/4)*4]
+rdsBand = rdsBand[:(len(rdsBand)//4)*4]
 
-c57 = numpy.tile( [1., -1.], len(rdsBand)/4 )
+c57 = numpy.tile( [1., -1.], len(rdsBand)//4 )
 
 xi = rdsBand[::2] * c57
 xq = rdsBand[1::2] * (-c57)
@@ -69,7 +69,7 @@ xq = rdsBand[1::2] * (-c57)
 
 # low-pass filter
 
-filtLP = signal.remez(400, [0, 2400, 3000, sampleRate/4], [1, 0], Hz=sampleRate/2)
+filtLP = signal.remez(400, [0, 2400, 3000, sampleRate/4], [1, 0], fs=sampleRate/2)
 
 xfi = signal.convolve(xi, filtLP)
 xfq = signal.convolve(xq, filtLP)
@@ -198,5 +198,5 @@ for i in range(1, len(bi)):
 # write output
 
 f = io.open(args.output, "w")
-f.write(unicode(res))
+f.write(res)
 f.close()
