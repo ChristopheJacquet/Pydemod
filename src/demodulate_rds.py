@@ -38,7 +38,13 @@ if args.input == None or args.output == None:
     print("Must provide --input and --output")
 
 
-# captured using: rtl_fm -f 87.8M -s 228000 -l 0 fi878.raw
+# captured using: rtl_fm -f 87.8M -s 228000 -l 0 /tmp/87800.raw
+#
+# if the script complains that the header is wrong, use
+# rtl_fm  -f 104900k -s 228k -E wav /tmp/104900.wav
+#
+# if your version of rtl_fm does not understand the -E wav parameter, use sox to do it for you:
+# rtl_fm  -f 104900k -s 228k -E wav - | sox -t raw -r 228k -es -b 16 - -c 1 /tmp/104900.wav
 
 sampleRate, samples = wavfile.read(args.input)
 
