@@ -50,7 +50,7 @@ cat /tmp/104900.rds
 
 This file you can load into `redsea` or `RDSSpy`.
 
-Note that currently only 228k (= 4x 57 kHz) mpx files with an appropriate header can be used.
+The demodulator reads the sample rate from the WAV header and supports rates above 122 kHz, including 192 kHz. The rate must be high enough to represent the 57 kHz RDS signal and its filter band; 228 kHz recordings continue to work as before.
 
 Pydemod is licensed under the terms of the [GNU GPL v3](https://www.gnu.org/copyleft/gpl.html).
 
