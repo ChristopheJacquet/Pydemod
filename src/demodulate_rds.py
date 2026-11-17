@@ -29,7 +29,7 @@ import pydemod.filters.shaping as shaping_filter
 
 parser = argparse.ArgumentParser(description='Demodulates RDS bitstreams from FM multiplex basedband', epilog='The demodulated bitstream may be decoded using, for instance, RDS Surveyor: java -jar rdssurveyor.jar -inbinstrfile bitstream_file')
 
-parser.add_argument("--input", type=str, default=None, help='Input WAV file at 228 kHz')
+parser.add_argument("--input", type=str, default=None, help='Input WAV file with a sample rate above 122 kHz')
 parser.add_argument("--output", type=str, default=None, help="Output bitstream (text file composed of 0's and 1's)")
 
 args = parser.parse_args()
@@ -48,8 +48,8 @@ if args.input == None or args.output == None:
 
 sampleRate, samples = wavfile.read(args.input)
 
-if sampleRate != 228000:
-    print("Only supports WAV files at 228 kHz currently.")
+if sampleRate <= 122000:
+    raise ValueError("Input WAV sample rate must be above 122 kHz to include the 57 kHz RDS signal.")
 
 samples = samples.astype(float) / max(abs( samples ))
 
@@ -67,10 +67,10 @@ rdsBand = signal.convolve(samples, filt57k)
 # ensure array is of length 4*N
 rdsBand = rdsBand[:(len(rdsBand)//4)*4]
 
-c57 = numpy.tile( [1., -1.], len(rdsBand)//4 )
-
-xi = rdsBand[::2] * c57
-xq = rdsBand[1::2] * (-c57)
+xi_samples = numpy.arange(len(rdsBand[::2])) * 2
+xq_samples = numpy.arange(len(rdsBand[1::2])) * 2 + 1
+xi = rdsBand[::2] * numpy.cos(2 * numpy.pi * 57000 * xi_samples / sampleRate)
+xq = rdsBand[1::2] * -numpy.sin(2 * numpy.pi * 57000 * xq_samples / sampleRate)
 
 
 # low-pass filter
@@ -120,9 +120,10 @@ bi = (numpy.real(xr) >= 0) + 0
 
 #sampleInstants = numpy.zeros(len(bi))
 
-period = 24
+period = sampleRate / 9500.
 halfPeriod = period/2
 corr = period / 24.
+tolerance = period / 12.
 phase = 0
 
 res = ""
@@ -145,10 +146,10 @@ shift = 0
 
 for i in range(1, len(bi)):
     if bi[i-1] != bi[i]:  # transition
-        if phase < halfPeriod-2:
+        if phase < halfPeriod-tolerance:
             phase += corr
             #sampleInstants[i] = .5
-        elif phase > halfPeriod+2:
+        elif phase > halfPeriod+tolerance:
             phase -= corr
             #sampleInstants[i] = -.5
         else:
